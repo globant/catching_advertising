@@ -104,7 +104,7 @@ void trackObject(IplImage* imgThresh){
 				sectorDetectedObject(imgTracking,posX,posY);
 				cout<<"TIME: "<<t.getMiliseconds()/1000<<endl;
 			}else{
-				//t.start();
+				
 			}
 			
 		}
