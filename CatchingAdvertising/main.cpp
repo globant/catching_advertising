@@ -24,6 +24,7 @@ void sectorDetectedObject(IplImage *img, int posX, int posY);
 int distanceP2P(int posX, int posY, int lastX, int lastY);
 
 IplImage* imgTracking;
+IplImage *imgCopy;
 int lastX = -1;
 int lastY = -1;
 
@@ -95,7 +96,7 @@ void trackObject(IplImage* imgThresh){
 		if(lastX>=0 && lastY>=0 && posX>=0 && posY>=0){
 			cvLine(imgTracking, cvPoint(posX, posY), cvPoint(lastX, lastY), cvScalar(0,0,255), 4);
 			int distance = distanceP2P(posX,posY,lastX,lastY);
-			if(distance > 100){
+			//if(distance > 100){
 				MyTime t;
 				Person p;
 				p.setId(1);
@@ -103,9 +104,9 @@ void trackObject(IplImage* imgThresh){
 				personas.push_back(p);
 				sectorDetectedObject(imgTracking,posX,posY);
 				cout<<"TIME: "<<t.getMiliseconds()/1000<<endl;
-			}else{
+			//}else{
 				
-			}
+			//}
 			
 		}
 		lastX = posX;
@@ -134,14 +135,18 @@ void sectorDetectedObject(IplImage *img, int posX, int posY){
 	int yDivision = (int)img->height/3;
 	int xDivision = (int)img->width/3;
 	CvFont font;
-	font = cvFont(2,1);
-	
+	font = cvFont(2,1);	 
 
 	//A1 Sector
 	if(posX > 0 && posX < xDivision
 		&& posY > 0 && posY < yDivision){
-		cvPutText(img,"A1:Nivel ALTO de interes.",cvPoint(10,25),&font,cvScalar(0,255,0));
-	} 
+			if(img != imgCopy){
+				imgCopy = img;
+				cvPutText(imgCopy,"A1:Nivel ALTO de interes.",cvPoint(10,25),&font,cvScalar(0,255,0));
+			}
+	}else{
+		//img = imgCopy;
+	}
 	//A2 Sector
 	if(posX > 0 && posX < xDivision
 		&& posY > yDivision && posY < 2*yDivision){
