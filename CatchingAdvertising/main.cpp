@@ -3,11 +3,15 @@
 #include <opencv/highgui.h>
 #include <opencv/cxcore.h>
 
+//OpenGL
+#include <gl\freeglut.h>
+
+
 //Own libraries
 #include "Person.h"
-#include "MyTime.h"
 
 //Project
+#include <process.h>
 #include <dos.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,26 +20,31 @@
 #include <ctime>
 #include <cmath>
 
-
+//Functions signatures
 IplImage* GetThresholdedImage(IplImage* imgHSV);
 void trackObject(IplImage* imgThresh);
 void createGrid(IplImage *frame);
 void sectorDetectedObject(IplImage *img, int posX, int posY);
 int distanceP2P(int posX, int posY, int lastX, int lastY);
+unsigned __stdcall myTimeThread(void* a);
+void calculateTime();
 
+//Globals
 IplImage* imgTracking;
-IplImage *imgCopy;
 int lastX = -1;
 int lastY = -1;
-
 std::list<Person>personas;
 Person p;
+int cont = 0;
+int idCont = 0;
+int id1=11;
+bool timeBool = true;
+bool a1 = true,a2 = true,a3 = true,b1 = true,b2 = true,b3 =true,c1 = true,c2 = true,c3 = true;
 
 using namespace std;
 using namespace cv;
 
 int main(int argc, char* argv[]){
-
 	CvCapture* capture =0;       
     capture = cvCaptureFromCAM(0);
     if(!capture){
@@ -43,7 +52,7 @@ int main(int argc, char* argv[]){
 		return -1;
     }
       
-    IplImage* frame=0;
+    IplImage* frame = 0;
 	frame = cvQueryFrame(capture);           
     if(!frame) return -1;
 	imgTracking=cvCreateImage(cvGetSize(frame),IPL_DEPTH_8U, 3);
@@ -67,7 +76,7 @@ int main(int argc, char* argv[]){
         cvReleaseImage(&imgHSV);
         cvReleaseImage(&imgThresh);            
         cvReleaseImage(&frame);
-		int c = cvWaitKey(10);
+		int c = cvWaitKey(1);
         if((char)c == 27 ) break;      
 	}
 
@@ -77,7 +86,7 @@ int main(int argc, char* argv[]){
 }
 
 IplImage* GetThresholdedImage(IplImage* imgHSV){       
-    IplImage* imgThresh=cvCreateImage(cvGetSize(imgHSV),IPL_DEPTH_8U, 1);
+    IplImage* imgThresh = cvCreateImage(cvGetSize(imgHSV),IPL_DEPTH_8U, 1);
     cvInRangeS(imgHSV, cvScalar(170,160,60), cvScalar(180,256,256), imgThresh);
     return imgThresh;
 }
@@ -92,29 +101,34 @@ void trackObject(IplImage* imgThresh){
 	if(area > 1000){
 		int posX = moment10/area;
 		int posY = moment01/area;
-		cout<<"posX: "<<posX<<" posY: "<<posY<<endl;
 		if(lastX>=0 && lastY>=0 && posX>=0 && posY>=0){
 			cvLine(imgTracking, cvPoint(posX, posY), cvPoint(lastX, lastY), cvScalar(0,0,255), 4);
 			int distance = distanceP2P(posX,posY,lastX,lastY);
-			//if(distance > 100){
-				MyTime t;
-				Person p;
-				p.setId(1);
-				p.setMyTime(t);
-				personas.push_back(p);
-				sectorDetectedObject(imgTracking,posX,posY);
-				cout<<"TIME: "<<t.getMiliseconds()/1000<<endl;
-			//}else{
-				
-			//}
 			
+			if(distance > 100 || personas.size() < 1){
+				p.setId(idCont);
+				idCont++;
+				personas.push_back(p);
+				HANDLE t2 = (HANDLE) _beginthreadex(NULL, 0,  myTimeThread,  &id1, 0, 0);
+				personas.front().setSeconds(cont);
+				sectorDetectedObject(imgTracking,posX,posY);
+				
+			}else {
+				sectorDetectedObject(imgTracking,posX,posY);
+			}
+			timeBool = true;
 		}
 		lastX = posX;
 		lastY = posY;
+	}else{
+		//personas.front().setSeconds(cont);
+		cout<<".";
+		cont = 0;
+		timeBool = false;
 	}
-
 	free(moments);
 }
+
 void createGrid(IplImage *frame){
 	int yDivision = (int)frame->height/3;
 	int xDivision = (int)frame->width/3;
@@ -136,62 +150,113 @@ void sectorDetectedObject(IplImage *img, int posX, int posY){
 	int xDivision = (int)img->width/3;
 	CvFont font;
 	font = cvFont(2,1);	 
+	
+	IplImage *imgCopy = cvCreateImage(cvGetSize(img),IPL_DEPTH_8U, 3);
 
 	//A1 Sector
 	if(posX > 0 && posX < xDivision
 		&& posY > 0 && posY < yDivision){
-			if(img != imgCopy){
+			if(a1){
 				imgCopy = img;
 				cvPutText(imgCopy,"A1:Nivel ALTO de interes.",cvPoint(10,25),&font,cvScalar(0,255,0));
+				cout<<endl<<"SECTOR: A1 - Nivel ALTO de interes";
+				a1 = false;
+				a2 = true,a3 = true,b1 = true,b2 = true,b3 =true,c1 = true,c2 = true,c3 = true;
 			}
-	}else{
-		//img = imgCopy;
 	}
 	//A2 Sector
 	if(posX > 0 && posX < xDivision
 		&& posY > yDivision && posY < 2*yDivision){
-		cvPutText(img,"A2:Nivel ALTO de interes.",cvPoint(10,25),&font,cvScalar(0,255,0));
+			if(img != imgCopy && a2){
+				imgCopy = img;
+				cvPutText(imgCopy,"A2:Nivel ALTO de interes.",cvPoint(10,25),&font,cvScalar(0,255,0));
+				cout<<endl<<"SECTOR: A2 - Nivel ALTO de interes";
+				a2 = false;
+				a1 = true,a3 = true,b1 = true,b2 = true,b3 =true,c1 = true,c2 = true,c3 = true;
+			}
 	}
 	//A3 Sector
 	if(posX > 0 && posX < xDivision
 		&& posY > 2*yDivision && posY < 3*yDivision){
-		cvPutText(img,"A3:Nivel ALTO de interes.",cvPoint(10,25),&font,cvScalar(0,255,0));
+			if(img != imgCopy && a3){
+				imgCopy = img;
+				cvPutText(imgCopy,"A3:Nivel ALTO de interes.",cvPoint(10,25),&font,cvScalar(0,255,0));	
+				cout<<endl<<"SECTOR: A3 - Nivel ALTO de interes";
+				a3 = false;
+				a2 = true,a1 = true,b1 = true,b2 = true,b3 =true,c1 = true,c2 = true,c3 = true;
+			}
 	}
 
 	//B1 Sector
 	if(posX > xDivision && posX < 2*xDivision
 		&& posY > 0 && posY < yDivision){
-		cvPutText(img,"B1:Nivel MEDIO de interes.",cvPoint(10,25),&font,cvScalar(0,255,255));
+			if(img != imgCopy && b1){
+				imgCopy = img;
+				cvPutText(imgCopy,"B1:Nivel MEDIO de interes.",cvPoint(10,25),&font,cvScalar(0,255,255));	
+				cout<<endl<<"SECTOR: B1 - Nivel MEDIO de interes";
+				b1 = false;
+				a2 = true,a3 = true,a1 = true,b2 = true,b3 =true,c1 = true,c2 = true,c3 = true;
+			}
 	}
 
 	//B2 Sector
 	if(posX > xDivision && posX < 2*xDivision
 		&& posY > yDivision && posY < 2*yDivision){
-		cvPutText(img,"B2:Nivel MEDIO de interes.",cvPoint(10,25),&font,cvScalar(0,255,255));
+			if(img != imgCopy && b2){
+				imgCopy = img;
+				cvPutText(imgCopy,"B2:Nivel MEDIO de interes.",cvPoint(10,25),&font,cvScalar(0,255,255));	
+				cout<<endl<<"SECTOR: B2 - Nivel MEDIO de interes";
+				b2 = false;
+				a2 = true,a3 = true,b1 = true,a1 = true,b3 =true,c1 = true,c2 = true,c3 = true;
+			}
 	}
 
 	//B3 Sector
 	if(posX > xDivision && posX < 2*xDivision
 		&& posY > 2*yDivision && posY < 3*yDivision){
-		cvPutText(img,"B3:Nivel MEDIO de interes.",cvPoint(10,25),&font,cvScalar(0,255,255));
+			if(img != imgCopy && b3){
+				imgCopy = img;
+				cvPutText(imgCopy,"B3:Nivel MEDIO de interes.",cvPoint(10,25),&font,cvScalar(0,255,255));	
+				cout<<endl<<"SECTOR: B3 - Nivel MEDIO de interes";
+				b3 = false;
+				a2 = true,a3 = true,b1 = true,b2 = true,a1 =true,c1 = true,c2 = true,c3 = true;
+			}
 	}
 
 	//C1 Sector
 	if(posX > 2*xDivision && posX < 3*xDivision
 		&& posY > 0 && posY < yDivision){
-		cvPutText(img,"C1:Nivel BAJO de interes.",cvPoint(10,25),&font,cvScalar(0,0,255));
+			if(c1){
+				imgCopy = img;
+				cvPutText(imgCopy,"C1:Nivel BAJO de interes.",cvPoint(10,25),&font,cvScalar(0,0,255));	
+				cout<<endl<<"SECTOR: C1 - Nivel BAJO de interes";
+				c1 = false;
+				a2 = true,a3 = true,b1 = true,b2 = true,b3 =true,a1 = true,c2 = true,c3 = true;
+			}
 	}
 
 	//C2 Sector
 	if(posX > 2*xDivision && posX < 3*xDivision
 		&& posY > yDivision && posY < 2*yDivision){
-		cvPutText(img,"C2:Nivel BAJO de interes.",cvPoint(10,25),&font,cvScalar(0,0,255));
+			if(c2){
+				imgCopy = img;
+				cvPutText(imgCopy,"C2:Nivel BAJO de interes.",cvPoint(10,25),&font,cvScalar(0,0,255));	
+				cout<<endl<<"SECTOR: C2 - Nivel BAJO de interes";
+				c2 = false;
+				a2 = true,a3 = true,b1 = true,b2 = true,b3 =true,c1 = true,a1 = true,c3 = true;
+			}
 	}
 
 	//C3 Sector
 	if(posX > 2*xDivision && posX < 3*xDivision
 		&& posY > 2*yDivision && posY < 3*yDivision){
-		cvPutText(img,"C3:Nivel BAJO de interes.",cvPoint(10,25),&font,cvScalar(0,0,255));
+			if(c3){
+				imgCopy = img;
+				cvPutText(imgCopy,"C3:Nivel BAJO de interes.",cvPoint(10,25),&font,cvScalar(0,0,255));	
+				cout<<endl<<"SECTOR: C3 - Nivel BAJO de interes";
+				c3 = false;
+				a2 = true,a3 = true,b1 = true,b2 = true,b3 =true,c1 = true,c2 = true,a1 = true;
+			}
 	}
 }
 
@@ -199,4 +264,24 @@ void sectorDetectedObject(IplImage *img, int posX, int posY){
 int distanceP2P(int posX, int posY, int lastX, int lastY){
 	int res = sqrt(pow(double(lastX - posX),2) + pow(double(lastY - posY),2));
 	return res;
+}
+
+//Calculate the time that a person stays in the web cam
+void calculateTime(){
+	Sleep(1000);
+	personas.front().setSeconds(cont);
+	//cout<<"TIME:  "<<cont<<endl;
+	cout<<endl<<"La persona ha estado: "<<personas.front().getSeconds()<<" SEGUNDOS.";
+	cont++;
+}
+
+//Time Thread function
+unsigned __stdcall myTimeThread(void* a) {
+	int child = *(int*) a;
+	while(true){
+		if(timeBool){
+			calculateTime();
+		}
+	}
+	return 0;
 }

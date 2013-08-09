@@ -7,12 +7,11 @@ Person::Person(){
 	this -> seconds = 0;
 }
 
-Person::Person(int id, float posX, float posY, float seconds,MyTime t){
+Person::Person(int id, float posX, float posY, float seconds){
 	this -> id = id;
 	this -> posX = posX;
 	this -> posY = posY;
 	this -> seconds = seconds;
-	this -> time = t;
 }
 
 Person::~Person(){}
@@ -34,10 +33,6 @@ float Person::getSeconds(){
 	return this -> seconds;
 }
 
-MyTime Person::getMyTime(){
-	return this->time;
-}
-
 int Person::getTotalTime(){
 	return this->totalTime;
 }
@@ -57,10 +52,6 @@ void Person::setPosY(float py){
 
 void Person::setSeconds(float seconds){
 	this->seconds = seconds;
-}
-
-void Person::setMyTime(MyTime t){
-	this->time = t;
 }
 		
 void Person::setTotalTime(int tt){
