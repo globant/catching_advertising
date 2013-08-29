@@ -82,6 +82,7 @@ int main(int argc, char* argv[]){
         cvReleaseImage(&imgHSV);
         cvReleaseImage(&imgThresh);            
         cvReleaseImage(&frame);
+		cvReleaseImage(&frame);
 		int c = cvWaitKey(1);
         if((char)c == 27 ) break;      
 	}
@@ -103,10 +104,10 @@ void trackObject(IplImage* imgThresh){
 	double moment10 = cvGetSpatialMoment(moments, 1, 0);
 	double moment01 = cvGetSpatialMoment(moments, 0, 1);
 	double area = cvGetCentralMoment(moments, 0, 0);
-	
+	int posX = moment10/area;
+	int posY = moment01/area;
 	if(area > 1000){
-		int posX = moment10/area;
-		int posY = moment01/area;
+		
 		if(lastX>=0 && lastY>=0 && posX>=0 && posY>=0){
 			cvLine(imgTracking, cvPoint(posX, posY), cvPoint(lastX, lastY), cvScalar(0,0,255), 4);
 			int distance = distanceP2P(posX,posY,lastX,lastY);
@@ -127,8 +128,18 @@ void trackObject(IplImage* imgThresh){
 		lastX = posX;
 		lastY = posY;
 	}else{
-		//personas.front().setSeconds(cont);
 		cout<<".";
+		/*if(!personas.empty() && personas.front().getSeconds() > 10 && (a1 == true || a2 == true || a3 == true)){
+			cout<<endl<<"La persona Realmente esta interesada, ha pasado mas de 10 seg en area de ALTO interes"<<endl;
+		}
+		if(!personas.empty() && personas.front().getSeconds() > 10 && (b1 == true || b2 == true || b3 == true)){
+			cout<<endl<<"La persona esta interesada, ha pasado mas de 10 seg en area de MEDIO interes"<<endl;
+		}
+		if(!personas.empty() && personas.front().getSeconds() > 10 && (c1 == true || c2 == true || c3 == true)){
+			cout<<endl<<"La persona NO esta interesada, ha pasado mas de 10 seg en area de BAJO interes"<<endl;
+		}*/
+		lastX = moment10/area;
+		lastY = moment01/area;
 		cont = 0;
 		timeBool = false;
 	}
@@ -158,16 +169,17 @@ void sectorDetectedObject(IplImage *img, int posX, int posY){
 	font = cvFont(2,1);
 	IplImage *imgCopy = cvCreateImage(cvGetSize(img),IPL_DEPTH_8U, 3);
 	char resc[255];
-	sprintf(resc, "Tiempo: %d", (int)personas.front().getSeconds());
+
 	//A1 Sector
 	if(posX > 0 && posX < xDivision
 		&& posY > 0 && posY < yDivision){
-			if(a1){
+			if(a1 || true){
+				sprintf(resc, "Real Time: %d  Seconds", (int)personas.front().getSeconds());
 				cvNamedWindow("TEXT");
-				cvPutText(imgCopy,"A1:Nivel ALTO de interes.",cvPoint(10,25),&font,cvScalar(0,255,0));
+				cvPutText(imgCopy,"A1:High level of interest.",cvPoint(10,25),&font,cvScalar(0,255,0));
 				cvPutText(imgCopy,resc,cvPoint(10,55),&font,cvScalar(0,255,0));
 				cvShowImage("TEXT",imgCopy);
-				cout<<endl<<"SECTOR: A1 - Nivel ALTO de interes";
+				//cout<<endl<<"SECTOR: A1 - Nivel ALTO de interes";
 				a1 = false;
 				a2 = true,a3 = true,b1 = true,b2 = true,b3 =true,c1 = true,c2 = true,c3 = true;
 			}
@@ -175,12 +187,13 @@ void sectorDetectedObject(IplImage *img, int posX, int posY){
 	//A2 Sector
 	if(posX > 0 && posX < xDivision
 		&& posY > yDivision && posY < 2*yDivision){
-			if(img != imgCopy && a2){
+			if(a2 || true){
+				sprintf(resc, "Real Time: %d  Seconds", (int)personas.front().getSeconds());
 				cvNamedWindow("TEXT");
-				cvPutText(imgCopy,"A2:Nivel ALTO de interes.",cvPoint(10,25),&font,cvScalar(0,255,0));
+				cvPutText(imgCopy,"A2:High level of interest.",cvPoint(10,25),&font,cvScalar(0,255,0));
 				cvPutText(imgCopy,resc,cvPoint(10,55),&font,cvScalar(0,255,0));
 				cvShowImage("TEXT",imgCopy);
-				cout<<endl<<"SECTOR: A2 - Nivel ALTO de interes";
+				//cout<<endl<<"SECTOR: A2 - Nivel ALTO de interes";
 				a2 = false;
 				a1 = true,a3 = true,b1 = true,b2 = true,b3 =true,c1 = true,c2 = true,c3 = true;
 			}
@@ -188,13 +201,13 @@ void sectorDetectedObject(IplImage *img, int posX, int posY){
 	//A3 Sector
 	if(posX > 0 && posX < xDivision
 		&& posY > 2*yDivision && posY < 3*yDivision){
-			if(img != imgCopy && a3){
-				//imgCopy = img;
+			if(a3 || true ){
+				sprintf(resc, "Real Time: %d  Seconds", (int)personas.front().getSeconds());
 				cvNamedWindow("TEXT");
-				cvPutText(imgCopy,"A3:Nivel ALTO de interes.",cvPoint(10,25),&font,cvScalar(0,255,0));	
+				cvPutText(imgCopy,"A3:High level of interest.",cvPoint(10,25),&font,cvScalar(0,255,0));	
 				cvPutText(imgCopy,resc,cvPoint(10,55),&font,cvScalar(0,255,0));
 				cvShowImage("TEXT",imgCopy);
-				cout<<endl<<"SECTOR: A3 - Nivel ALTO de interes";
+				//cout<<endl<<"SECTOR: A3 - Nivel ALTO de interes";
 				a3 = false;
 				a2 = true,a1 = true,b1 = true,b2 = true,b3 =true,c1 = true,c2 = true,c3 = true;
 			}
@@ -203,13 +216,13 @@ void sectorDetectedObject(IplImage *img, int posX, int posY){
 	//B1 Sector
 	if(posX > xDivision && posX < 2*xDivision
 		&& posY > 0 && posY < yDivision){
-			if(img != imgCopy && b1){
-				//imgCopy = img;
+			if(b1 || true){
+				sprintf(resc, "Real Time: %d  Seconds", (int)personas.front().getSeconds());
 				cvNamedWindow("TEXT");
-				cvPutText(imgCopy,"B1:Nivel MEDIO de interes.",cvPoint(10,25),&font,cvScalar(0,255,255));	
+				cvPutText(imgCopy,"B1:Medium level of interest.",cvPoint(10,25),&font,cvScalar(0,255,255));	
 				cvPutText(imgCopy,resc,cvPoint(10,55),&font,cvScalar(0,255,255));
 				cvShowImage("TEXT",imgCopy);
-				cout<<endl<<"SECTOR: B1 - Nivel MEDIO de interes";
+				//cout<<endl<<"SECTOR: B1 - Nivel MEDIO de interes";
 				b1 = false;
 				a2 = true,a3 = true,a1 = true,b2 = true,b3 =true,c1 = true,c2 = true,c3 = true;
 			}
@@ -218,12 +231,13 @@ void sectorDetectedObject(IplImage *img, int posX, int posY){
 	//B2 Sector
 	if(posX > xDivision && posX < 2*xDivision
 		&& posY > yDivision && posY < 2*yDivision){
-			if(img != imgCopy && b2){
+			if(b2 || true){
+				sprintf(resc, "Real Time: %d  Seconds", (int)personas.front().getSeconds());
 				cvNamedWindow("TEXT");
-				cvPutText(imgCopy,"B2:Nivel MEDIO de interes.",cvPoint(10,25),&font,cvScalar(0,255,255));	
+				cvPutText(imgCopy,"B2:Medium level of interest.",cvPoint(10,25),&font,cvScalar(0,255,255));	
 				cvPutText(imgCopy,resc,cvPoint(10,55),&font,cvScalar(0,255,255));
 				cvShowImage("TEXT",imgCopy);
-				cout<<endl<<"SECTOR: B2 - Nivel MEDIO de interes";
+				//cout<<endl<<"SECTOR: B2 - Nivel MEDIO de interes";
 				b2 = false;
 				a2 = true,a3 = true,b1 = true,a1 = true,b3 =true,c1 = true,c2 = true,c3 = true;
 			}
@@ -232,12 +246,13 @@ void sectorDetectedObject(IplImage *img, int posX, int posY){
 	//B3 Sector
 	if(posX > xDivision && posX < 2*xDivision
 		&& posY > 2*yDivision && posY < 3*yDivision){
-			if(img != imgCopy && b3){
+			if(b3 || true){
+				sprintf(resc, "Real Time: %d  Seconds", (int)personas.front().getSeconds());
 				cvNamedWindow("TEXT");
-				cvPutText(imgCopy,"B3:Nivel MEDIO de interes.",cvPoint(10,25),&font,cvScalar(0,255,255));	
+				cvPutText(imgCopy,"B3:Medium level of interest.",cvPoint(10,25),&font,cvScalar(0,255,255));	
 				cvPutText(imgCopy,resc,cvPoint(10,55),&font,cvScalar(0,255,255));
 				cvShowImage("TEXT",imgCopy);
-				cout<<endl<<"SECTOR: B3 - Nivel MEDIO de interes";
+				//cout<<endl<<"SECTOR: B3 - Nivel MEDIO de interes";
 				b3 = false;
 				a2 = true,a3 = true,b1 = true,b2 = true,a1 =true,c1 = true,c2 = true,c3 = true;
 			}
@@ -246,12 +261,13 @@ void sectorDetectedObject(IplImage *img, int posX, int posY){
 	//C1 Sector
 	if(posX > 2*xDivision && posX < 3*xDivision
 		&& posY > 0 && posY < yDivision){
-			if(c1){
+			if(c1 || true){
+				sprintf(resc, "Real Time: %d  Seconds", (int)personas.front().getSeconds());
 				cvNamedWindow("TEXT");
-				cvPutText(imgCopy,"C1:Nivel BAJO de interes.",cvPoint(10,25),&font,cvScalar(0,0,255));	
+				cvPutText(imgCopy,"C1:Low level of interest.",cvPoint(10,25),&font,cvScalar(0,0,255));	
 				cvPutText(imgCopy,resc,cvPoint(10,55),&font,cvScalar(0,0,255));
 				cvShowImage("TEXT",imgCopy);
-				cout<<endl<<"SECTOR: C1 - Nivel BAJO de interes";
+				//cout<<endl<<"SECTOR: C1 - Nivel BAJO de interes";
 				c1 = false;
 				a2 = true,a3 = true,b1 = true,b2 = true,b3 =true,a1 = true,c2 = true,c3 = true;
 			}
@@ -260,12 +276,13 @@ void sectorDetectedObject(IplImage *img, int posX, int posY){
 	//C2 Sector
 	if(posX > 2*xDivision && posX < 3*xDivision
 		&& posY > yDivision && posY < 2*yDivision){
-			if(c2){
+			if(c2 || true){
+				sprintf(resc, "Real Time: %d  Seconds", (int)personas.front().getSeconds());
 				cvNamedWindow("TEXT");
-				cvPutText(imgCopy,"C2:Nivel BAJO de interes.",cvPoint(10,25),&font,cvScalar(0,0,255));	
+				cvPutText(imgCopy,"C2:Low level of interest.",cvPoint(10,25),&font,cvScalar(0,0,255));	
 				cvPutText(imgCopy,resc,cvPoint(10,55),&font,cvScalar(0,0,255));
 				cvShowImage("TEXT",imgCopy);
-				cout<<endl<<"SECTOR: C2 - Nivel BAJO de interes";
+				//cout<<endl<<"SECTOR: C2 - Nivel BAJO de interes";
 				c2 = false;
 				a2 = true,a3 = true,b1 = true,b2 = true,b3 =true,c1 = true,a1 = true,c3 = true;
 			}
@@ -274,12 +291,13 @@ void sectorDetectedObject(IplImage *img, int posX, int posY){
 	//C3 Sector
 	if(posX > 2*xDivision && posX < 3*xDivision
 		&& posY > 2*yDivision && posY < 3*yDivision){
-			if(c3){
+			if(c3 || true){
+				sprintf(resc, "Real Time: %d  Seconds", (int)personas.front().getSeconds());
 				cvNamedWindow("TEXT");
-				cvPutText(imgCopy,"C3:Nivel BAJO de interes.",cvPoint(10,25),&font,cvScalar(0,0,255));	
+				cvPutText(imgCopy,"C3:Low level of interest.",cvPoint(10,25),&font,cvScalar(0,0,255));	
 				cvPutText(imgCopy,resc,cvPoint(10,55),&font,cvScalar(0,0,255));
 				cvShowImage("TEXT",imgCopy);
-				cout<<endl<<"SECTOR: C3 - Nivel BAJO de interes";
+				//cout<<endl<<"SECTOR: C3 - Nivel BAJO de interes";
 				c3 = false;
 				a2 = true,a3 = true,b1 = true,b2 = true,b3 =true,c1 = true,c2 = true,a1 = true;
 			}
@@ -296,9 +314,6 @@ int distanceP2P(int posX, int posY, int lastX, int lastY){
 void calculateTime(){
 	Sleep(1000);
 	personas.front().setSeconds(cont);
-	if(cont > 0){
-		cout<<endl<<"La persona ha estado: "<<personas.front().getSeconds()<<" SEGUNDOS.";
-	}
 	cont++;
 }
 
