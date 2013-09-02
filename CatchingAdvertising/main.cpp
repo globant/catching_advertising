@@ -94,7 +94,7 @@ int main(int argc, char* argv[]){
 
 IplImage* GetThresholdedImage(IplImage* imgHSV){       
     IplImage* imgThresh = cvCreateImage(cvGetSize(imgHSV),IPL_DEPTH_8U, 1);
-    cvInRangeS(imgHSV, cvScalar(170,160,60), cvScalar(180,256,256), imgThresh);
+    cvInRangeS(imgHSV, cvScalar(160,120,50), cvScalar(180,256,256), imgThresh);
     return imgThresh;
 }
 
