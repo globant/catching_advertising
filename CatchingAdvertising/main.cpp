@@ -19,8 +19,9 @@
 #include <list>
 #include <ctime>
 #include <cmath>
+#include <string>
 
-//Functions signatures
+//Person Functions signatures
 IplImage* GetThresholdedImage(IplImage* imgHSV);
 void trackObject(IplImage* imgThresh);
 void createGrid(IplImage *frame);
@@ -32,7 +33,10 @@ void InitOpenGL( int w, int h );
 void ViewTransform( float w , float h );
 void OnDraw();
 
-//Globals
+//Gesture Functions signatures
+void detectAndDisplay( IplImage* img);
+
+//Person recognition Globals
 IplImage* imgTracking;
 int lastX = -1;
 int lastY = -1;
@@ -46,29 +50,66 @@ bool a1 = true,a2 = true,a3 = true,b1 = true,b2 = true,b3 =true,c1 = true,c2 = t
 float WIDTH = 600;
 float HEIGHT = 600;
 
-
 using namespace std;
 using namespace cv;
 
+//Gesture recognition globals for Mouth
+CvRect *r;
+String haarcascade_mouth = "Mouth.xml";
+
+CvHaarClassifierCascade* cascadeMouth;
+CvMemStorage* storageMouth;
+bool boolMouth = false;
+
+
+
+
 int main(int argc, char* argv[]){
-	CvCapture* capture =0;       
-    capture = cvCaptureFromCAM(0);
-    if(!capture){
+	CascadeClassifier cascade_face;
+	CascadeClassifier cascade_eye;
+	CascadeClassifier cascade_mouth;
+	cascadeMouth = (CvHaarClassifierCascade*)cvLoad("Mouth.xml");
+
+	CvCapture* capture = 0;
+	CvCapture* captureFace = 0;
+    capture     = cvCaptureFromCAM(0);
+	captureFace = cvCaptureFromCAM(1);
+
+    if(!capture || !captureFace){
 		cout<<"Capture failure"<<endl;
 		return -1;
     }
+
+	if(!cascade_face.load(haarcascade_mouth)){
+        cout << "[ERROR]: Could not load classifier cascade Face" <<endl;
+        return -1;
+    }
+
       
     IplImage* frame = 0;
+	IplImage* frameFace = 0;
 	frame = cvQueryFrame(capture);           
+	frameFace = cvQueryFrame(captureFace);
     if(!frame) return -1;
+	if(!frameFace) return -1;
 	imgTracking=cvCreateImage(cvGetSize(frame),IPL_DEPTH_8U, 3);
     cvZero(imgTracking); //convert the image, 'imgTracking' to black
 	cvNamedWindow("Video",CV_WINDOW_FULLSCREEN);     
     cvNamedWindow("Ball");    
     while(true){
-		frame = cvQueryFrame(capture);           
+		frame = cvQueryFrame(capture);
+		frameFace = cvQueryFrame(captureFace);
         if(!frame) break;
+		if(!frameFace) break;
 		frame=cvCloneImage(frame); 
+		storageMouth = cvCreateMemStorage(0);
+		detectAndDisplay(frameFace);
+		if(boolMouth){
+			cout<<"MOUTH DETECTED"<<endl;
+		}
+		boolMouth = false;
+		cvReleaseMemStorage(&storageMouth);
+
         cvSmooth(frame, frame, CV_GAUSSIAN,9,9); //smooth the original image using Gaussian kernel
         IplImage* imgHSV = cvCreateImage(cvGetSize(frame), IPL_DEPTH_8U, 3);
         cvCvtColor(frame, imgHSV, CV_BGR2HSV); //Change the color format from BGR to HSV
@@ -82,13 +123,13 @@ int main(int argc, char* argv[]){
         cvReleaseImage(&imgHSV);
         cvReleaseImage(&imgThresh);            
         cvReleaseImage(&frame);
-		cvReleaseImage(&frame);
 		int c = cvWaitKey(1);
         if((char)c == 27 ) break;      
 	}
 
     cvDestroyAllWindows() ;
     cvReleaseCapture(&capture);
+	cvReleaseCapture(&captureFace);
     return 0;
 }
 
@@ -326,4 +367,17 @@ unsigned __stdcall myTimeThread(void* a) {
 		}
 	}
 	return 0;
+}
+
+void detectAndDisplay(IplImage* img){
+    int i;
+	CvSeq* mouth = cvHaarDetectObjects(img, cascadeMouth, storageMouth, 1.2, 2, CV_HAAR_DO_CANNY_PRUNING, cvSize (100, 100));
+    for(i = 0; i<(mouth ? mouth->total:0); i++){
+         r=(CvRect*)cvGetSeqElem(mouth,i);
+         cvRectangle(img,
+                     cvPoint(r->x, r->y),
+                     cvPoint(r->x + r->width, r->y + r->height),
+                     CV_RGB(0,0,255), 2, 8, 0);
+    }
+	cvShowImage("Capture - Face Detection", img);
 }
