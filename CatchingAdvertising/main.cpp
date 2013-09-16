@@ -55,7 +55,7 @@ using namespace cv;
 
 //Gesture recognition globals for Mouth
 CvRect *r;
-String haarcascade_mouth = "Mouth.xml";
+String haarcascade_mouth = "haarcascade_mcs_mouth.xml";
 
 CvHaarClassifierCascade* cascadeMouth;
 CvMemStorage* storageMouth;
@@ -68,7 +68,7 @@ int main(int argc, char* argv[]){
 	CascadeClassifier cascade_face;
 	CascadeClassifier cascade_eye;
 	CascadeClassifier cascade_mouth;
-	cascadeMouth = (CvHaarClassifierCascade*)cvLoad("Mouth.xml");
+	cascadeMouth = (CvHaarClassifierCascade*)cvLoad("haarcascade_mcs_mouth.xml");
 
 	CvCapture* capture = 0;
 	CvCapture* captureFace = 0;
@@ -81,7 +81,7 @@ int main(int argc, char* argv[]){
     }
 
 	if(!cascade_face.load(haarcascade_mouth)){
-        cout << "[ERROR]: Could not load classifier cascade Face" <<endl;
+        cout << "[ERROR]: Could not load classifier cascade Mouth" <<endl;
         return -1;
     }
 
@@ -104,10 +104,6 @@ int main(int argc, char* argv[]){
 		frame=cvCloneImage(frame); 
 		storageMouth = cvCreateMemStorage(0);
 		detectAndDisplay(frameFace);
-		if(boolMouth){
-			cout<<"MOUTH DETECTED"<<endl;
-		}
-		boolMouth = false;
 		cvReleaseMemStorage(&storageMouth);
 
         cvSmooth(frame, frame, CV_GAUSSIAN,9,9); //smooth the original image using Gaussian kernel
@@ -120,6 +116,7 @@ int main(int argc, char* argv[]){
         cvAdd(frame, imgTracking, frame);
         cvShowImage("Ball", imgThresh);           
         cvShowImage("Video", frame);
+		boolMouth = false;
         cvReleaseImage(&imgHSV);
         cvReleaseImage(&imgThresh);            
         cvReleaseImage(&frame);
@@ -223,6 +220,10 @@ void sectorDetectedObject(IplImage *img, int posX, int posY){
 				//cout<<endl<<"SECTOR: A1 - Nivel ALTO de interes";
 				a1 = false;
 				a2 = true,a3 = true,b1 = true,b2 = true,b3 =true,c1 = true,c2 = true,c3 = true;
+				if(boolMouth){
+					cvPutText(imgCopy,"MOUTH DETECTED",cvPoint(10,85),&font,cvScalar(0,255,0));
+					cvShowImage("TEXT",imgCopy);
+				}
 			}
 	}
 	//A2 Sector
@@ -371,13 +372,14 @@ unsigned __stdcall myTimeThread(void* a) {
 
 void detectAndDisplay(IplImage* img){
     int i;
-	CvSeq* mouth = cvHaarDetectObjects(img, cascadeMouth, storageMouth, 1.2, 2, CV_HAAR_DO_CANNY_PRUNING, cvSize (100, 100));
+	CvSeq* mouth = cvHaarDetectObjects(img, cascadeMouth, storageMouth, 1.2, 3, CV_HAAR_DO_CANNY_PRUNING, cvSize (100, 100));
     for(i = 0; i<(mouth ? mouth->total:0); i++){
          r=(CvRect*)cvGetSeqElem(mouth,i);
          cvRectangle(img,
                      cvPoint(r->x, r->y),
                      cvPoint(r->x + r->width, r->y + r->height),
                      CV_RGB(0,0,255), 2, 8, 0);
+		 boolMouth = true;
     }
 	cvShowImage("Capture - Face Detection", img);
 }
