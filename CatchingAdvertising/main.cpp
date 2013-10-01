@@ -127,6 +127,7 @@ void createSectors(){
 	//cout<<"SECTOR: "<<sector32.getName()<<" "<<sector32.getLevelOfInterest()<<endl;
 }
 
+
 void detectAndDisplay(IplImage* img){
     int i;
 	CvSeq* mouth = cvHaarDetectObjects(img, cascadeMouth, storageMouth, 1.2, 3, CV_HAAR_DO_CANNY_PRUNING, cvSize (100, 100));

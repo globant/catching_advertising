@@ -1,6 +1,7 @@
 #ifndef _SECTOR_H_
 #define _SECTOR_H_
 
+
 using namespace std;
 
 class Sector{

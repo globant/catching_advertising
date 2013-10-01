@@ -1,5 +1,6 @@
 #include "Sector.h"
 
+
 Sector::Sector(){
 	this->name = "";
 	this->levelOfInterest = "";

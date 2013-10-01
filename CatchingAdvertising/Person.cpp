@@ -1,5 +1,6 @@
 #include "Person.h"
 
+
 Person::Person(){
 	this -> id = 0;
 	this -> posX = 0;
