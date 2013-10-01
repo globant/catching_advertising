@@ -7,7 +7,7 @@ Person::Person(){
 	this -> seconds = 0;
 }
 
-Person::Person(int id, float posX, float posY, float seconds){
+Person::Person(int id, float posX, float posY, int seconds){
 	this -> id = id;
 	this -> posX = posX;
 	this -> posY = posY;
@@ -29,7 +29,7 @@ float Person::getPosY(){
 	return this -> posY;
 }
 
-float Person::getSeconds(){
+int Person::getSeconds(){
 	return this -> seconds;
 }
 
@@ -50,7 +50,7 @@ void Person::setPosY(float py){
 	this->posY = py;
 }
 
-void Person::setSeconds(float seconds){
+void Person::setSeconds(int seconds){
 	this->seconds = seconds;
 }
 		

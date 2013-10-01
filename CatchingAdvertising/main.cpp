@@ -6,40 +6,35 @@
 //OpenGL
 #include <gl\freeglut.h>
 
-
 //Own libraries
 #include "Person.h"
+#include "Sector.h"
 
 //Project
 #include <process.h>
-#include <dos.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <iostream>
 #include <list>
-#include <ctime>
 #include <cmath>
-#include <string>
 
 //Person Functions signatures
 IplImage* GetThresholdedImage(IplImage* imgHSV);
 void trackObject(IplImage* imgThresh);
 void createGrid(IplImage *frame);
-void sectorDetectedObject(IplImage *img, int posX, int posY);
-int distanceP2P(int posX, int posY, int lastX, int lastY);
+void sectorDetectedObject(IplImage *img, double posX, double posY);
+double distanceP2P(double posX, double posY, double lastX, double lastY);
 unsigned __stdcall myTimeThread(void* a);
 void calculateTime();
-void InitOpenGL( int w, int h );
-void ViewTransform( float w , float h );
-void OnDraw();
+void createSectors();
 
 //Gesture Functions signatures
 void detectAndDisplay( IplImage* img);
 
 //Person recognition Globals
 IplImage* imgTracking;
-int lastX = -1;
-int lastY = -1;
+double lastX = -1;
+double lastY = -1;
 std::list<Person>personas;
 Person p;
 int cont = 0;
@@ -56,17 +51,11 @@ using namespace cv;
 //Gesture recognition globals for Mouth
 CvRect *r;
 String haarcascade_mouth = "haarcascade_mcs_mouth.xml";
-
 CvHaarClassifierCascade* cascadeMouth;
 CvMemStorage* storageMouth;
 bool boolMouth = false;
 
-
-
-
 int main(int argc, char* argv[]){
-	CascadeClassifier cascade_face;
-	CascadeClassifier cascade_eye;
 	CascadeClassifier cascade_mouth;
 	cascadeMouth = (CvHaarClassifierCascade*)cvLoad("haarcascade_mcs_mouth.xml");
 
@@ -75,23 +64,19 @@ int main(int argc, char* argv[]){
     capture     = cvCaptureFromCAM(0);
 	captureFace = cvCaptureFromCAM(1);
 
+	//SectorTest
+	createSectors();
+
     if(!capture || !captureFace){
 		cout<<"Capture failure"<<endl;
 		return -1;
     }
 
-	if(!cascade_face.load(haarcascade_mouth)){
-        cout << "[ERROR]: Could not load classifier cascade Mouth" <<endl;
-        return -1;
-    }
-
-      
     IplImage* frame = 0;
 	IplImage* frameFace = 0;
 	frame = cvQueryFrame(capture);           
 	frameFace = cvQueryFrame(captureFace);
-    if(!frame) return -1;
-	if(!frameFace) return -1;
+    if(!frame || !frameFace) return -1;
 	imgTracking=cvCreateImage(cvGetSize(frame),IPL_DEPTH_8U, 3);
     cvZero(imgTracking); //convert the image, 'imgTracking' to black
 	cvNamedWindow("Video",CV_WINDOW_FULLSCREEN);     
@@ -99,13 +84,13 @@ int main(int argc, char* argv[]){
     while(true){
 		frame = cvQueryFrame(capture);
 		frameFace = cvQueryFrame(captureFace);
-        if(!frame) break;
-		if(!frameFace) break;
+        if(!frame || !frameFace) break;
 		frame=cvCloneImage(frame); 
+		//---------Mouth-----------
 		storageMouth = cvCreateMemStorage(0);
 		detectAndDisplay(frameFace);
 		cvReleaseMemStorage(&storageMouth);
-
+		//---------Mouth-----------
         cvSmooth(frame, frame, CV_GAUSSIAN,9,9); //smooth the original image using Gaussian kernel
         IplImage* imgHSV = cvCreateImage(cvGetSize(frame), IPL_DEPTH_8U, 3);
         cvCvtColor(frame, imgHSV, CV_BGR2HSV); //Change the color format from BGR to HSV
@@ -118,16 +103,39 @@ int main(int argc, char* argv[]){
         cvShowImage("Video", frame);
 		boolMouth = false;
         cvReleaseImage(&imgHSV);
-        cvReleaseImage(&imgThresh);            
+        cvReleaseImage(&imgThresh);    
         cvReleaseImage(&frame);
 		int c = cvWaitKey(1);
         if((char)c == 27 ) break;      
 	}
-
     cvDestroyAllWindows() ;
     cvReleaseCapture(&capture);
 	cvReleaseCapture(&captureFace);
     return 0;
+}
+
+void createSectors(){
+	Sector sector11;sector11.setName("A1");sector11.setLevelOfInterest("HIGH");
+	Sector sector12;sector12.setName("A2");sector12.setLevelOfInterest("HIGH");
+	Sector sector13;sector13.setName("A3");sector13.setLevelOfInterest("HIGH");
+	Sector sector21;sector21.setName("B1");sector21.setLevelOfInterest("MEDIUM");
+	Sector sector22;sector22.setName("B2");sector22.setLevelOfInterest("MEDIUM");
+	Sector sector23;sector23.setName("B3");sector23.setLevelOfInterest("MEDIUM");
+	Sector sector31;sector31.setName("C1");sector31.setLevelOfInterest("LOW");
+	Sector sector32;sector32.setName("C2");sector32.setLevelOfInterest("LOW");
+	Sector sector33;sector33.setName("C3");sector33.setLevelOfInterest("LOW");
+	//cout<<"SECTOR: "<<sector32.getName()<<" "<<sector32.getLevelOfInterest()<<endl;
+}
+
+void detectAndDisplay(IplImage* img){
+    int i;
+	CvSeq* mouth = cvHaarDetectObjects(img, cascadeMouth, storageMouth, 1.2, 3, CV_HAAR_DO_CANNY_PRUNING, cvSize (100, 100));
+    for(i = 0; i<(mouth ? mouth->total:0); i++){
+         r=(CvRect*)cvGetSeqElem(mouth,i);
+         cvRectangle(img, cvPoint(r->x, r->y),cvPoint(r->x + r->width, r->y + r->height),CV_RGB(0,0,255), 2, 8, 0);
+		 boolMouth = true;
+    }
+	cvShowImage("Capture - Face Detection", img);
 }
 
 IplImage* GetThresholdedImage(IplImage* imgHSV){       
@@ -142,13 +150,13 @@ void trackObject(IplImage* imgThresh){
 	double moment10 = cvGetSpatialMoment(moments, 1, 0);
 	double moment01 = cvGetSpatialMoment(moments, 0, 1);
 	double area = cvGetCentralMoment(moments, 0, 0);
-	int posX = moment10/area;
-	int posY = moment01/area;
+	double posX = moment10/area;
+	double posY = moment01/area;
 	if(area > 1000){
 		
 		if(lastX>=0 && lastY>=0 && posX>=0 && posY>=0){
-			cvLine(imgTracking, cvPoint(posX, posY), cvPoint(lastX, lastY), cvScalar(0,0,255), 4);
-			int distance = distanceP2P(posX,posY,lastX,lastY);
+			cvLine(imgTracking, cvPoint((int)posX, (int)posY), cvPoint((int)lastX, (int)lastY), cvScalar(0,0,255), 4);
+			double distance = distanceP2P(posX,posY,lastX,lastY);
 			
 			if(distance > 100 || personas.size() < 1){
 				p.setId(idCont);
@@ -200,7 +208,7 @@ void createGrid(IplImage *frame){
 	cvLine(frame, cvPoint(2*xDivision,0), cvPoint(2*xDivision,frame->height), lineColor, thickness);
 }
 
-void sectorDetectedObject(IplImage *img, int posX, int posY){
+void sectorDetectedObject(IplImage *img, double posX, double posY){
 	int yDivision = (int)img->height/3;
 	int xDivision = (int)img->width/3;
 	CvFont font;
@@ -217,7 +225,6 @@ void sectorDetectedObject(IplImage *img, int posX, int posY){
 				cvPutText(imgCopy,"A1:High level of interest.",cvPoint(10,25),&font,cvScalar(0,255,0));
 				cvPutText(imgCopy,resc,cvPoint(10,55),&font,cvScalar(0,255,0));
 				cvShowImage("TEXT",imgCopy);
-				//cout<<endl<<"SECTOR: A1 - Nivel ALTO de interes";
 				a1 = false;
 				a2 = true,a3 = true,b1 = true,b2 = true,b3 =true,c1 = true,c2 = true,c3 = true;
 				if(boolMouth){
@@ -235,7 +242,6 @@ void sectorDetectedObject(IplImage *img, int posX, int posY){
 				cvPutText(imgCopy,"A2:High level of interest.",cvPoint(10,25),&font,cvScalar(0,255,0));
 				cvPutText(imgCopy,resc,cvPoint(10,55),&font,cvScalar(0,255,0));
 				cvShowImage("TEXT",imgCopy);
-				//cout<<endl<<"SECTOR: A2 - Nivel ALTO de interes";
 				a2 = false;
 				a1 = true,a3 = true,b1 = true,b2 = true,b3 =true,c1 = true,c2 = true,c3 = true;
 			}
@@ -249,7 +255,6 @@ void sectorDetectedObject(IplImage *img, int posX, int posY){
 				cvPutText(imgCopy,"A3:High level of interest.",cvPoint(10,25),&font,cvScalar(0,255,0));	
 				cvPutText(imgCopy,resc,cvPoint(10,55),&font,cvScalar(0,255,0));
 				cvShowImage("TEXT",imgCopy);
-				//cout<<endl<<"SECTOR: A3 - Nivel ALTO de interes";
 				a3 = false;
 				a2 = true,a1 = true,b1 = true,b2 = true,b3 =true,c1 = true,c2 = true,c3 = true;
 			}
@@ -264,7 +269,6 @@ void sectorDetectedObject(IplImage *img, int posX, int posY){
 				cvPutText(imgCopy,"B1:Medium level of interest.",cvPoint(10,25),&font,cvScalar(0,255,255));	
 				cvPutText(imgCopy,resc,cvPoint(10,55),&font,cvScalar(0,255,255));
 				cvShowImage("TEXT",imgCopy);
-				//cout<<endl<<"SECTOR: B1 - Nivel MEDIO de interes";
 				b1 = false;
 				a2 = true,a3 = true,a1 = true,b2 = true,b3 =true,c1 = true,c2 = true,c3 = true;
 			}
@@ -279,7 +283,6 @@ void sectorDetectedObject(IplImage *img, int posX, int posY){
 				cvPutText(imgCopy,"B2:Medium level of interest.",cvPoint(10,25),&font,cvScalar(0,255,255));	
 				cvPutText(imgCopy,resc,cvPoint(10,55),&font,cvScalar(0,255,255));
 				cvShowImage("TEXT",imgCopy);
-				//cout<<endl<<"SECTOR: B2 - Nivel MEDIO de interes";
 				b2 = false;
 				a2 = true,a3 = true,b1 = true,a1 = true,b3 =true,c1 = true,c2 = true,c3 = true;
 			}
@@ -294,7 +297,6 @@ void sectorDetectedObject(IplImage *img, int posX, int posY){
 				cvPutText(imgCopy,"B3:Medium level of interest.",cvPoint(10,25),&font,cvScalar(0,255,255));	
 				cvPutText(imgCopy,resc,cvPoint(10,55),&font,cvScalar(0,255,255));
 				cvShowImage("TEXT",imgCopy);
-				//cout<<endl<<"SECTOR: B3 - Nivel MEDIO de interes";
 				b3 = false;
 				a2 = true,a3 = true,b1 = true,b2 = true,a1 =true,c1 = true,c2 = true,c3 = true;
 			}
@@ -309,7 +311,6 @@ void sectorDetectedObject(IplImage *img, int posX, int posY){
 				cvPutText(imgCopy,"C1:Low level of interest.",cvPoint(10,25),&font,cvScalar(0,0,255));	
 				cvPutText(imgCopy,resc,cvPoint(10,55),&font,cvScalar(0,0,255));
 				cvShowImage("TEXT",imgCopy);
-				//cout<<endl<<"SECTOR: C1 - Nivel BAJO de interes";
 				c1 = false;
 				a2 = true,a3 = true,b1 = true,b2 = true,b3 =true,a1 = true,c2 = true,c3 = true;
 			}
@@ -324,7 +325,6 @@ void sectorDetectedObject(IplImage *img, int posX, int posY){
 				cvPutText(imgCopy,"C2:Low level of interest.",cvPoint(10,25),&font,cvScalar(0,0,255));	
 				cvPutText(imgCopy,resc,cvPoint(10,55),&font,cvScalar(0,0,255));
 				cvShowImage("TEXT",imgCopy);
-				//cout<<endl<<"SECTOR: C2 - Nivel BAJO de interes";
 				c2 = false;
 				a2 = true,a3 = true,b1 = true,b2 = true,b3 =true,c1 = true,a1 = true,c3 = true;
 			}
@@ -339,7 +339,6 @@ void sectorDetectedObject(IplImage *img, int posX, int posY){
 				cvPutText(imgCopy,"C3:Low level of interest.",cvPoint(10,25),&font,cvScalar(0,0,255));	
 				cvPutText(imgCopy,resc,cvPoint(10,55),&font,cvScalar(0,0,255));
 				cvShowImage("TEXT",imgCopy);
-				//cout<<endl<<"SECTOR: C3 - Nivel BAJO de interes";
 				c3 = false;
 				a2 = true,a3 = true,b1 = true,b2 = true,b3 =true,c1 = true,c2 = true,a1 = true;
 			}
@@ -347,16 +346,9 @@ void sectorDetectedObject(IplImage *img, int posX, int posY){
 }
 
 //Distance between 2 points and returns the distance in pixels
-int distanceP2P(int posX, int posY, int lastX, int lastY){
-	int res = sqrt(pow(double(lastX - posX),2) + pow(double(lastY - posY),2));
+double distanceP2P(double posX, double posY, double lastX, double lastY){
+	double res = sqrt(pow(double(lastX - posX),2) + pow(double(lastY - posY),2));
 	return res;
-}
-
-//Calculate the time that a person stays in the web cam
-void calculateTime(){
-	Sleep(1000);
-	personas.front().setSeconds(cont);
-	cont++;
 }
 
 //Time Thread function
@@ -370,16 +362,9 @@ unsigned __stdcall myTimeThread(void* a) {
 	return 0;
 }
 
-void detectAndDisplay(IplImage* img){
-    int i;
-	CvSeq* mouth = cvHaarDetectObjects(img, cascadeMouth, storageMouth, 1.2, 3, CV_HAAR_DO_CANNY_PRUNING, cvSize (100, 100));
-    for(i = 0; i<(mouth ? mouth->total:0); i++){
-         r=(CvRect*)cvGetSeqElem(mouth,i);
-         cvRectangle(img,
-                     cvPoint(r->x, r->y),
-                     cvPoint(r->x + r->width, r->y + r->height),
-                     CV_RGB(0,0,255), 2, 8, 0);
-		 boolMouth = true;
-    }
-	cvShowImage("Capture - Face Detection", img);
+//Calculate the time that a person stays in the web cam
+void calculateTime(){
+	Sleep(1000);
+	personas.front().setSeconds(cont);
+	cont++;
 }
